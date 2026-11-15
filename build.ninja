@@ -1,0 +1,174 @@
+xcode_developer = /Applications/Xcode.app/Contents/Developer
+swift_developer_lib = $xcode_developer/Platforms/MacOSX.platform/Developer
+
+gtest_cflags = -I/opt/homebrew/opt/googletest/include -DGTEST_HAS_PTHREAD=1
+gtest_libs = -L/opt/homebrew/opt/googletest/lib -lgtest_main -lgtest
+cmocka_cflags = -I/opt/homebrew/opt/cmocka/include
+cmocka_libs = -L/opt/homebrew/opt/cmocka/lib -lcmocka
+
+rule swift_test
+  command = DEVELOPER_DIR="$xcode_developer" xcrun swiftc -F "$swift_developer_lib/Library/Frameworks" -I "$swift_developer_lib/usr/lib" -L "$swift_developer_lib/usr/lib" -Xlinker -rpath -Xlinker "$swift_developer_lib/Library/Frameworks" -Xlinker -rpath -Xlinker "$swift_developer_lib/usr/lib" $in -o $out
+  description = SWIFT $out
+
+rule cxx_test
+  command = clang++ -std=c++26 $gtest_cflags $in -o $out $gtest_libs
+  description = CXX $out
+
+rule c_test
+  command = clang -std=c23 -Wall -Wextra -Wpedantic $cmocka_cflags $in -o $out $cmocka_libs
+  description = C $out
+
+rule rust_test
+  command = rustc --edition=2021 --test $in -o $out
+  description = RUST $out
+
+rule go_test
+  command = go build -o $out $in
+  description = GO $out
+
+rule zig_test
+  command = zig test --test-no-exec --cache-dir .cache/zig -femit-bin=$out $in
+  description = ZIG $out
+
+rule ocaml_test
+  command = mkdir -p $out.d && opam exec -- ocamlfind ocamlopt -package alcotest -c -o $out.d/main.cmx $in && opam exec -- ocamlfind ocamlopt -package alcotest -linkpkg $out.d/main.cmx -o $out
+  description = OCAML $out
+
+rule python_test
+  command = python3 -B $in
+  description = PYTHON $in
+  pool = console
+
+rule ruby_test
+  command = ruby $in
+  description = RUBY TEST $in
+  pool = console
+
+rule perl_test
+  command = perl $in
+  description = PERL TEST $in
+  pool = console
+
+rule lisp_test
+  command = sbcl --script $in
+  description = LISP TEST $in
+  pool = console
+
+rule nim_test
+  command = nim c --nimcache:.cache/nim/20 --out:$out $in
+  description = NIM $out
+
+rule haskell_test
+  command = mkdir -p $out.d && ghc -package-env .cache/haskell/20.env -package hspec -outputdir $out.d $in -o $out
+  description = HASKELL $out
+
+rule elixir_test
+  command = elixir $in
+  description = ELIXIR $in
+  pool = console
+
+rule javascript_test
+  command = node --test $in
+  description = JAVASCRIPT $in
+  pool = console
+
+rule prolog_test
+  command = swipl -q -s $in -g "run_tests -> halt(0); halt(1)"
+  description = PROLOG $in
+  pool = console
+
+rule assembly_test
+  command = clang -arch arm64 $in -o $out
+  description = ARM64 $out
+
+rule clips_test
+  command = "$$HOME/.local/bin/clips" -f2 $in
+  description = CLIPS $in
+  pool = console
+
+rule erlang_compile
+  command = mkdir -p $beam_dir && erlc -o $beam_dir $in
+  description = ERLANG $out
+
+rule erlang_test
+  command = erl -noshell -pa $beam_dir -eval 'case eunit:test(main, [verbose]) of ok -> halt(0); _ -> halt(1) end.'
+  description = EUNIT $in
+  pool = console
+
+rule cc_test
+  command = $in $args
+  description = TEST $in
+  pool = console
+
+build bin/20-cc: cxx_test xz-y/easy/20/main.cc
+build 20-cc: cc_test bin/20-cc
+
+build bin/20-c: c_test xz-y/easy/20/main.c
+build 20-c: cc_test bin/20-c
+
+build bin/20-rs: rust_test xz-y/easy/20/main.rs
+build 20-rs: cc_test bin/20-rs
+
+build bin/20-go: go_test xz-y/easy/20/main.go
+build 20-go: cc_test bin/20-go
+  args = -test.v
+
+build bin/20-zig: zig_test xz-y/easy/20/main.zig
+build 20-zig: cc_test bin/20-zig
+
+build bin/20-ml: ocaml_test xz-y/easy/20/main.ml
+build 20-ml: cc_test bin/20-ml
+
+build bin/20-swift: swift_test xz-y/easy/20/main.swift
+build 20-swift: cc_test bin/20-swift
+
+build 20-rb: ruby_test xz-y/easy/20/main.rb
+
+build 20-py: python_test xz-y/easy/20/main.py
+
+build 20-pl: perl_test xz-y/easy/20/main.pl
+
+build 20-lisp: lisp_test xz-y/easy/20/main.lisp
+
+build bin/20-nim: nim_test xz-y/easy/20/main.nim
+build 20-nim: cc_test bin/20-nim
+
+build 20-exs: elixir_test xz-y/easy/20/main.exs
+
+build 20-js: javascript_test xz-y/easy/20/main.js
+
+build bin/20-hs: haskell_test xz-y/easy/20/main.hs | .cache/haskell/20.env
+build 20-hs: cc_test bin/20-hs
+
+build 20-pro: prolog_test xz-y/easy/20/main.pro
+
+build bin/20-s: assembly_test xz-y/easy/20/main.s
+build 20-s: cc_test bin/20-s
+
+build 20-clp: clips_test xz-y/easy/20/main.clp
+
+build bin/20-erl.d/main.beam: erlang_compile xz-y/easy/20/main.erl
+  beam_dir = bin/20-erl.d
+build 20-erl: erlang_test bin/20-erl.d/main.beam
+  beam_dir = bin/20-erl.d
+
+build bin/21-cc: cxx_test xz-y/easy/21/main.cc
+build 21-cc: cc_test bin/21-cc
+
+build bin/21-go: go_test xz-y/easy/21/main.go
+build 21-go: cc_test bin/21-go
+  args = -test.v
+
+build 21-pl: prolog_test xz-y/easy/21/main.pl
+
+build 26-pl: prolog_test xz-y/easy/26/main.pl
+
+build 27-pl: prolog_test xz-y/easy/27/main.pl
+
+build 70-pl: prolog_test xz-y/easy/70/main.pl
+
+build 88-pl: prolog_test xz-y/easy/88/main.pl
+
+build 205-pl: prolog_test xz-y/easy/205/main.pl
+
+build 206-pl: prolog_test xz-y/easy/206/main.pl

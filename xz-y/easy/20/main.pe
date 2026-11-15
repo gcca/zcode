@@ -1,0 +1,96 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+use Test::More;
+
+sub is_opening {
+    my ($c) = @_;
+    return $c eq '{' || $c eq '[' || $c eq '(';
+}
+
+sub closing_of {
+    my ($c) = @_;
+    return '{' if $c eq '}';
+    return '[' if $c eq ']';
+    return '(' if $c eq ')';
+    die "closing_of requires a closing bracket\n";
+}
+
+sub valid_parenthesis {
+    my ($s) = @_;
+    my @stack;
+
+    for my $c (split //, $s) {
+        if (is_opening($c)) {
+            push @stack, $c;
+            next;
+        }
+
+        my $closing = closing_of($c);
+        return 0 if !@stack || $stack[-1] ne $closing;
+        pop @stack;
+    }
+
+    return @stack == 0;
+}
+
+subtest 'recognizes only opening brackets' => sub {
+    for my $c (split //, '([{') {
+        ok(is_opening($c), "opening $c");
+    }
+    for my $c (split //, ')]}a') {
+        ok(!is_opening($c), "not opening $c");
+    }
+};
+
+subtest 'maps closing brackets to openings' => sub {
+    is(closing_of('}'), '{', 'curly bracket');
+    is(closing_of(']'), '[', 'square bracket');
+    is(closing_of(')'), '(', 'round bracket');
+};
+
+subtest 'rejects unsupported closing_of arguments' => sub {
+    for my $c ('(', '[', '{', 'a', '') {
+        eval { closing_of($c) };
+        like($@, qr/^closing_of requires a closing bracket\n/, "rejects '$c'");
+    }
+};
+
+subtest 'accepts each bracket type' => sub {
+    for my $s ('()', '[]', '{}') {
+        ok(valid_parenthesis($s), $s);
+    }
+};
+
+subtest 'accepts adjacent and nested pairs and empty input' => sub {
+    for my $s ('()[]{}', '{[()]}', '{[()()]([])}{}[({})]', '(()[{}])({[]})', '') {
+        ok(valid_parenthesis($s), "valid '$s'");
+    }
+};
+
+subtest 'accepts long inputs' => sub {
+    ok(valid_parenthesis('(' x 5000 . ')' x 5000), 'deep nesting');
+    ok(valid_parenthesis('[]' x 5000), 'adjacent pairs');
+};
+
+subtest 'rejects mismatched and incorrectly nested pairs' => sub {
+    for my $s ('(]', '[(])') {
+        ok(!valid_parenthesis($s), $s);
+    }
+};
+
+subtest 'rejects unmatched brackets' => sub {
+    for my $s ('(', ')', '())', '(()', '{[()()]([])}{}[({})]]', '{[()()]([])}{}[({})]({') {
+        ok(!valid_parenthesis($s), $s);
+    }
+};
+
+subtest 'rejects deep mismatches and crossed nesting' => sub {
+    for my $s ('{[()()]([)]}{}', '{[({[()]})]}[({[}])]') {
+        ok(!valid_parenthesis($s), $s);
+    }
+    ok(!valid_parenthesis('(' x 4999 . '[)' . ')' x 4999), 'deep mismatch');
+};
+
+done_testing();
