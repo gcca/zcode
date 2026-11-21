@@ -172,3 +172,5 @@ build 88-pl: prolog_test xz-y/easy/88/main.pl
 build 205-pl: prolog_test xz-y/easy/205/main.pl
 
 build 206-pl: prolog_test xz-y/easy/206/main.pl
+
+build seq0-pl: prolog_test dmoj/seq0/main.pl
